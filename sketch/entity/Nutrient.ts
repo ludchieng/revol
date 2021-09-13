@@ -24,17 +24,16 @@ class Nutrient extends Entity {
     if (this.age() < this.ageGrowPlants)
       return;
     
-    if (this.nutrition > 0
-      && random(1) < sq(this.nutrition * this.pGrowPlants)
-    ) {
-      const plantMaxHp = min(this.nutrition, Plant.DEFAULT_GENES.maxHp);
-      let p = new Plant(
-        randomGaussian(this.pos.x, this.r*0.5),
-        randomGaussian(this.pos.y, this.r*0.5),
-        { maxHp: plantMaxHp }  
-      );
-      this.nutrition -= plantMaxHp;
-      entities.add(p);
+    if (random(1) < sq(this.nutrition * this.pGrowPlants)) {
+      for (let i = floor(random(5)) ; i > 0 && this.nutrition > 0 ; i--) {
+        const plantMaxHp = min(this.nutrition, Plant.DEFAULT_GENES.maxHp);
+        this.nutrition -= plantMaxHp;
+        entities.add(new Plant(
+          randomGaussian(this.pos.x, this.r*0.5),
+          randomGaussian(this.pos.y, this.r*0.5),
+          { maxHp: plantMaxHp }  
+        ));
+      }
     }
   }
 
