@@ -8,7 +8,7 @@ let mousepoint: p5.Vector;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  noFill().noStroke().frameRate(60);
+  frameRate(60).noFill().noStroke().rectMode(CENTER);
 
   view = new View(width/2, height/2, 0.89);
   entities = new EntitiesList();
@@ -16,7 +16,11 @@ function setup() {
   for (let i = 0; i < 50; i++) {
     const x = randomGaussian(0, width * 2);
     const y = randomGaussian(0, height * 2);
-    entities.add(new Nutrient(x, y, random(50, 400), random(30, 50)))
+    entities.add(new Nutrient(x, y, random(50, 400), random(2, 20)));
+  }
+
+  for (let i = 0; i < 1; i++) {
+    entities.add(new Worm(random(-width, width), random(-height, height)));
   }
 }
 
@@ -35,6 +39,7 @@ function mousePressed() {
   if (mouseButton === LEFT) {
     quadtree();
     mousepoint = createVector(mouseX - view.x, mouseY - view.y).div(view.scale());
+    console.log(+mousepoint.x.toFixed(0), +mousepoint.y.toFixed(0))
     qtreeVisitor = new QuadTreeVisitor<Entity>(mousepoint.x, mousepoint.y, qtree)
     qtreeVisitor.visitNextNode();
   } else {
@@ -76,7 +81,7 @@ function draw() {
         push();
         stroke(255);
         strokeWeight(1);
-        circle(e.pos.x, e.pos.y, e.r+10);
+        //circle(e.pos.x, e.pos.y, e.r+10);
         pop();
       }
     }

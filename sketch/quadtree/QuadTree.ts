@@ -96,8 +96,9 @@ class QuadTree<T> {
   nearest(
     x: number, y: number,
     filter?: (e?: T) => boolean,
+    maxDist?: number
   ): T | null {
-    const visitor = new QuadTreeVisitor(x, y, this, filter);
+    const visitor = new QuadTreeVisitor(x, y, this, filter, maxDist);
     visitor.visit();
     return (visitor.best.p) ? visitor.best.p.data : null;
   }
@@ -139,7 +140,7 @@ class QuadTree<T> {
         stroke(0, 255, 255)
       }
       if (this.ignore) {
-        strokeWeight(5);
+        strokeWeight(2);
         stroke(255, 255, 0)
       }
       rectMode(CENTER);

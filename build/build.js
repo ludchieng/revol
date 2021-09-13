@@ -5,13 +5,16 @@ var view;
 var mousepoint;
 function setup() {
     createCanvas(windowWidth, windowHeight);
-    noFill().noStroke().frameRate(60);
+    frameRate(60).noFill().noStroke().rectMode(CENTER);
     view = new View(width / 2, height / 2, 0.89);
     entities = new EntitiesList();
     for (var i = 0; i < 50; i++) {
         var x = randomGaussian(0, width * 2);
         var y = randomGaussian(0, height * 2);
-        entities.add(new Nutrient(x, y, random(50, 400), random(30, 50)));
+        entities.add(new Nutrient(x, y, random(50, 400), random(2, 20)));
+    }
+    for (var i = 0; i < 1; i++) {
+        entities.add(new Worm(random(-width, width), random(-height, height)));
     }
 }
 function windowResized() {
@@ -24,6 +27,7 @@ function mousePressed() {
     if (mouseButton === LEFT) {
         quadtree();
         mousepoint = createVector(mouseX - view.x, mouseY - view.y).div(view.scale());
+        console.log(+mousepoint.x.toFixed(0), +mousepoint.y.toFixed(0));
         qtreeVisitor = new QuadTreeVisitor(mousepoint.x, mousepoint.y, qtree);
         qtreeVisitor.visitNextNode();
     }
@@ -61,7 +65,6 @@ function draw() {
                 push();
                 stroke(255);
                 strokeWeight(1);
-                circle(e.pos.x, e.pos.y, e.r + 10);
                 pop();
             }
         }
@@ -118,15 +121,18 @@ var EntitiesList = (function () {
     function EntitiesList() {
         this.nutrients = [];
         this.plants = [];
+        this.worms = [];
     }
     EntitiesList.prototype.add = function (e) {
         if (e instanceof Nutrient)
             this.nutrients.push(e);
         if (e instanceof Plant)
             this.plants.push(e);
+        if (e instanceof Worm)
+            this.worms.push(e);
     };
     EntitiesList.prototype.all = function () {
-        return __spreadArrays(this.nutrients, this.plants);
+        return __spreadArrays(this.nutrients, this.plants, this.worms);
     };
     EntitiesList.prototype.updateLists = function () {
         for (var i = this.nutrients.length - 1; i >= 0; i--) {
@@ -139,15 +145,22 @@ var EntitiesList = (function () {
                 this.plants.splice(i, 1);
             }
         }
+        for (var i = this.worms.length - 1; i >= 0; i--) {
+            if (this.worms[i].dead()) {
+                this.worms.splice(i, 1);
+            }
+        }
     };
     return EntitiesList;
 }());
 var Entity = (function () {
-    function Entity(x, y, r) {
+    function Entity(x, y, r, maxSpeed) {
         if (r === void 0) { r = 8; }
         this.vel = createVector(0, 0);
         this.acc = createVector(0, 0);
+        this.maxSpeed = Infinity;
         this.pos = createVector(x, y);
+        this.maxSpeed = maxSpeed;
         this.r = r;
     }
     Entity.prototype.applyForce = function (force) {
@@ -158,6 +171,7 @@ var Entity = (function () {
     };
     Entity.prototype.update = function () {
         this.vel.add(this.acc);
+        this.vel.limit(this.maxSpeed);
         this.pos.add(this.vel);
         this.acc.mult(0);
         this.boundaries();
@@ -226,8 +240,10 @@ var Living = (function (_super) {
     __extends(Living, _super);
     function Living(x, y, r, genes) {
         if (r === void 0) { r = Living.RADIUS; }
-        var _this = _super.call(this, x, y, r) || this;
-        _this.genes = __assign(__assign({}, Living.DEFAULT_GENES), genes);
+        var _this = this;
+        genes = __assign(__assign({}, Living.DEFAULT_GENES), genes);
+        _this = _super.call(this, x, y, r, genes.maxSpeed) || this;
+        _this.genes = genes;
         _this.hp = genes.maxHp;
         _this.birthFrame = frameCount;
         return _this;
@@ -238,24 +254,23 @@ var Living = (function (_super) {
     Living.prototype.update = function () {
         if (this.dead())
             return;
+        this.applyForce(this.steerApproach().mult(this.genes.eatWeight));
         _super.prototype.update.call(this);
-        this.applyForce(this.steerEat().mult(this.genes.eatWeight));
-        this.applyForce(this.steerAvoid().mult(this.genes.avoidWeight));
     };
     Living.prototype.seek = function (target) {
         var desired = p5.Vector.sub(target.pos, this.pos)
-            .setMag(this.genes.maxVel);
+            .setMag(this.genes.maxSpeed);
         var steer = p5.Vector.sub(desired, this.vel);
-        steer.limit(this.maxforce());
+        steer.limit(this.maxForce());
         return steer;
     };
-    Living.prototype.maxforce = function () {
-        return this.genes.maxforceFactor * 1 / this.genes.maxVel;
+    Living.prototype.maxForce = function () {
+        return this.genes.maxForceFactor * 1 / this.genes.maxSpeed;
     };
     Living.RADIUS = 6;
     Living.DEFAULT_GENES = {
         maxHp: 1,
-        maxVel: 1.5,
+        maxSpeed: 4,
         maxForceFactor: 0.1,
         eatWeight: 1,
         avoidWeight: -1,
@@ -269,7 +284,8 @@ var Plant = (function (_super) {
     function Plant(x, y, genes) {
         if (genes === void 0) { genes = {}; }
         var _this = this;
-        genes = __assign(__assign(__assign({}, Plant.DEFAULT_GENES), genes), { maxHp: Plant.DEFAULT_GENES.maxHp * random(0.9, 1.1) });
+        genes = __assign(__assign({}, Plant.DEFAULT_GENES), genes);
+        genes = __assign(__assign({}, genes), { maxHp: Plant.DEFAULT_GENES.maxHp * random(0.9, 1.1) });
         _this = _super.call(this, x, y, Plant.RADIUS, genes) || this;
         _super.prototype.boundaries.call(_this);
         return _this;
@@ -281,7 +297,7 @@ var Plant = (function (_super) {
         circle(this.pos.x, this.pos.y, this.r);
         pop();
     };
-    Plant.prototype.steerEat = function () {
+    Plant.prototype.steerApproach = function () {
         return createVector(0, 0);
     };
     Plant.prototype.steerAvoid = function () {
@@ -290,7 +306,7 @@ var Plant = (function (_super) {
     Plant.RADIUS = 8;
     Plant.DEFAULT_GENES = {
         maxHp: 1,
-        maxVel: 0,
+        maxSpeed: 0,
         maxForceFactor: 0,
         eatWeight: 0,
         avoidWeight: 0,
@@ -304,8 +320,10 @@ var Worm = (function (_super) {
     function Worm(x, y, genes) {
         if (genes === void 0) { genes = {}; }
         var _this = this;
-        genes = __assign(__assign(__assign({}, Worm.DEFAULT_GENES), genes), { maxHp: Worm.DEFAULT_GENES.maxHp * random(0.95, 1.05), maxVel: Worm.DEFAULT_GENES.maxVel * random(0.95, 1.05), maxForceFactor: Worm.DEFAULT_GENES.maxForceFactor * random(0.95, 1.05) });
+        genes = __assign(__assign({}, Worm.DEFAULT_GENES), genes);
+        genes = __assign(__assign({}, genes), { maxHp: genes.maxHp * random(0.95, 1.05), maxSpeed: genes.maxSpeed * random(0.95, 1.05), maxForceFactor: genes.maxForceFactor * random(0.95, 1.05) });
         _this = _super.call(this, x, y, Worm.RADIUS, genes) || this;
+        _this.vel = p5.Vector.random2D().mult(random(1.5, 2.5));
         return _this;
     }
     Worm.prototype.clone = function () {
@@ -320,23 +338,55 @@ var Worm = (function (_super) {
     };
     Worm.prototype.render = function () {
         push();
-        fill(lerpColor(color(50, 20, 10), color(50, 255, 60), this.hp / this.genes.maxHp));
-        circle(this.pos.x, this.pos.y, this.r);
+        translate(this.pos.x, this.pos.y);
+        rotate(this.vel.heading() + HALF_PI);
+        fill(lerpColor(color(50, 20, 10), color(255, 200, 128), this.hp / this.genes.maxHp));
+        rect(0, 0, this.r, this.r * 4);
         pop();
+        push();
+        stroke(0, 255, 0);
+        strokeWeight(1);
+        noFill();
+        circle(this.pos.x, this.pos.y, this.genes.eatPerception * 2);
+        pop();
+        if (this.target) {
+            push();
+            stroke(255, 0, 255);
+            strokeWeight(2);
+            noFill();
+            circle(this.target.pos.x, this.target.pos.y, this.target.r + 10);
+            pop();
+        }
     };
-    Worm.prototype.steerEat = function () {
-        var nearest = qtree.nearest(this.pos.x, this.pos.y);
-        if (!nearest)
+    Worm.prototype.tryEat = function (p) {
+        if (this.pos.dist(p.pos) > this.r)
             return;
-        return createVector(0, 0);
+        this.hp += p.hp;
+        p.hp = 0;
+    };
+    Worm.prototype.steerApproach = function () {
+        var food = qtree.nearest(this.pos.x, this.pos.y, function (e) { return (e instanceof Plant); }, this.genes.eatPerception);
+        this.target = food;
+        if (!food)
+            return createVector(0, 0);
+        this.tryEat(food);
+        return this.seek(food);
     };
     Worm.prototype.steerAvoid = function () {
-        return createVector(0, 0);
+        var nearest = qtree.nearest(this.pos.x, this.pos.y, function (e) { return (e instanceof Worm); }, this.genes.avoidPerception);
+        if (!nearest)
+            return createVector(0, 0);
+        return this.seek(nearest);
     };
+    Worm.RADIUS = 4;
     Worm.DEFAULT_GENES = {
         maxHp: 5,
-        maxVel: 1.5,
+        maxSpeed: 2,
         maxForceFactor: 0.1,
+        eatWeight: 2,
+        avoidWeight: -2,
+        eatPerception: 80,
+        avoidPerception: 80,
     };
     return Worm;
 }(Living));
@@ -442,8 +492,8 @@ var QuadTree = (function () {
             return true;
         }
     };
-    QuadTree.prototype.nearest = function (x, y, filter) {
-        var visitor = new QuadTreeVisitor(x, y, this, filter);
+    QuadTree.prototype.nearest = function (x, y, filter, maxDist) {
+        var visitor = new QuadTreeVisitor(x, y, this, filter, maxDist);
         visitor.visit();
         return (visitor.best.p) ? visitor.best.p.data : null;
     };
@@ -482,7 +532,7 @@ var QuadTree = (function () {
                 stroke(0, 255, 255);
             }
             if (this.ignore) {
-                strokeWeight(5);
+                strokeWeight(2);
                 stroke(255, 255, 0);
             }
             rectMode(CENTER);
@@ -502,16 +552,18 @@ var QuadTree = (function () {
     return QuadTree;
 }());
 var QuadTreeVisitor = (function () {
-    function QuadTreeVisitor(x, y, qtree, filter) {
+    function QuadTreeVisitor(x, y, qtree, filter, maxDist) {
+        if (maxDist === void 0) { maxDist = Infinity; }
         this.x = x;
         this.y = y;
         this.root = qtree;
         this.currentNode = null;
         this.filter = filter || (function () { return true; });
-        this.best = { dist: qtree.boundary.w * 2 + qtree.boundary.h * 2, p: null };
+        this.best = { dist: maxDist, p: null };
         this.root.prepareForVisit();
     }
     QuadTreeVisitor.prototype.visit = function () {
+        this.visitNextNode();
         do {
             this.visitNextNode();
         } while (this.currentNode !== this.root);

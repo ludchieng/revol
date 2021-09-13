@@ -3,11 +3,13 @@ class Entity {
   pos: p5.Vector;
   vel: p5.Vector = createVector(0, 0);
   acc: p5.Vector = createVector(0, 0);
-  
+
+  maxSpeed: number = Infinity;
   r: number;
 
-  constructor(x: number, y: number, r = 8) {
+  constructor(x: number, y: number, r = 8, maxSpeed?: number) {
     this.pos = createVector(x, y);
+    this.maxSpeed = maxSpeed;
     this.r = r;
   }
 
@@ -21,6 +23,7 @@ class Entity {
 
   update() {
     this.vel.add(this.acc);
+    this.vel.limit(this.maxSpeed);
     this.pos.add(this.vel);
     this.acc.mult(0);
     this.boundaries();

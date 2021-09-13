@@ -6,7 +6,7 @@ abstract class Living extends Entity {
 
   static DEFAULT_GENES: GenesType = {
     maxHp: 1,
-    maxVel: 1.5,
+    maxSpeed: 4,
     maxForceFactor: 0.1,
     eatWeight: 1,
     avoidWeight: -1,
@@ -23,11 +23,12 @@ abstract class Living extends Entity {
     x: number, y: number, r = Living.RADIUS,
     genes: GenesType,
   ) {
-    super(x, y, r);
-    this.genes = {
+    genes = {
       ...Living.DEFAULT_GENES,
       ...genes,
     };
+    super(x, y, r, genes.maxSpeed);
+    this.genes = genes;
     this.hp = genes.maxHp;
     this.birthFrame = frameCount;
   }
@@ -39,27 +40,26 @@ abstract class Living extends Entity {
   update() {
     if (this.dead())
       return;
+    this.applyForce(this.steerApproach().mult(this.genes.eatWeight));
+    //this.applyForce(this.steerAvoid().mult(this.genes.avoidWeight));
     super.update();
-
-    this.applyForce(this.steerEat().mult(this.genes.eatWeight));
-    this.applyForce(this.steerAvoid().mult(this.genes.avoidWeight));
   }
 
-  abstract steerEat(): p5.Vector
+  abstract steerApproach(): p5.Vector
   abstract steerAvoid(): p5.Vector
 
   // Process force towards a target
   seek(target: Entity) {
     const desired = p5.Vector.sub(target.pos, this.pos)
-      .setMag(this.genes.maxVel);
+      .setMag(this.genes.maxSpeed);
 
     const steer = p5.Vector.sub(desired, this.vel);
-    steer.limit(this.maxforce());
+    steer.limit(this.maxForce());
 
     return steer;
   }
 
-  private maxforce() {
-    return this.genes.maxforceFactor * 1/this.genes.maxVel;
+  private maxForce() {
+    return this.genes.maxForceFactor * 1/this.genes.maxSpeed;
   }
 }

@@ -14,19 +14,20 @@ class QuadTreeVisitor<T> {
 
   constructor(
     x: number, y: number, qtree: QuadTree<T>,
-    filter?: (e?: T) => boolean
+    filter?: (e?: T) => boolean, maxDist = Infinity
   ) {
     this.x = x;
     this.y = y;
     this.root = qtree;
     this.currentNode = null;
     this.filter = filter || (() => true);
-    this.best = { dist: qtree.boundary.w*2 + qtree.boundary.h*2, p: null };
+    this.best = { dist: maxDist, p: null };
 
     this.root.prepareForVisit();
   }
 
   visit() {
+    this.visitNextNode();
     do {
       this.visitNextNode();
     } while (this.currentNode !== this.root);

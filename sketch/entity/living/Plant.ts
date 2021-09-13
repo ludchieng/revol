@@ -4,7 +4,7 @@ class Plant extends Living {
 
   static DEFAULT_GENES: GenesType = {
     maxHp: 1,
-    maxVel: 0,
+    maxSpeed: 0,
     maxForceFactor: 0,
     eatWeight: 0,
     avoidWeight: 0,
@@ -13,8 +13,8 @@ class Plant extends Living {
   };
 
   constructor(x: number, y: number, genes: GenesType = {}) {
+    genes = { ...Plant.DEFAULT_GENES, ...genes };
     genes = {
-      ...Plant.DEFAULT_GENES,
       ...genes,
       maxHp: Plant.DEFAULT_GENES.maxHp * random(0.9, 1.1),
     };
@@ -31,7 +31,7 @@ class Plant extends Living {
     pop();
   }
   
-  steerEat() {
+  steerApproach() {
     return createVector(0, 0);
   }
 
