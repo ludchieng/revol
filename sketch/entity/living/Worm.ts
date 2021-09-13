@@ -1,13 +1,13 @@
 class Worm extends Living {
 
-  static RADIUS = 4;
+  static RADIUS = 6;
   
   static DEFAULT_GENES: GenesType = {
     maxHp: 5,
     lossHp: 1,
     breedHpFactor: 2,
-    maxSpeed: 2,
-    maxForceFactor: 0.1,
+    maxSpeed: 3,
+    maxForceFactor: 0.2,
     eatWeight: 2,
     avoidWeight: -2,
     eatPerception: 80,
@@ -46,7 +46,7 @@ class Worm extends Living {
     translate(this.pos.x, this.pos.y);
     rotate(this.vel.heading() + HALF_PI);
     fill(lerpColor(color(50, 20, 10), color(255, 200, 128), this.hp/this.genes.maxHp));
-    rect(0, 0, this.r, this.r*4);
+    rect(0, 0, this.r, this.r*5);
     pop();
 
     // Eat perception
