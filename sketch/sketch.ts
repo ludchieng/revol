@@ -1,14 +1,14 @@
 //createSlider(1, 30, 15, 1).position(10, 10).style("width", "100px");
 let entities: EntitiesList;
-let qtree: QuadTree;
-let qtreeVisitor: QuadTreeVisitor;
+let qtree: QuadTree<Entity>;
+let qtreeVisitor: QuadTreeVisitor<Entity>;
 let view: View;
 
 let mousepoint: p5.Vector;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  noFill().frameRate(60);
+  noFill().noStroke().frameRate(60);
 
   view = new View(width/2, height/2, 0.89);
   entities = new EntitiesList();
@@ -35,7 +35,7 @@ function mousePressed() {
   if (mouseButton === LEFT) {
     quadtree();
     mousepoint = createVector(mouseX - view.x, mouseY - view.y).div(view.scale());
-    qtreeVisitor = new QuadTreeVisitor(mousepoint.x, mousepoint.y, { dist: width+height, p: null }, qtree)
+    qtreeVisitor = new QuadTreeVisitor<Entity>(mousepoint.x, mousepoint.y, qtree)
     qtreeVisitor.visitNextNode();
   } else {
     qtreeVisitor.visitNextNode();
@@ -49,7 +49,7 @@ function draw() {
   
   background(0);
 
-  //quadtree();
+  quadtree();
   
   for (const e of entities.all()) {
     e.update();
@@ -67,18 +67,20 @@ function draw() {
   }
 
   entities.updateLists();
-/*
+
   for (let e of entities.all()) {
     const range = new Circle(e.pos.x, e.pos.y, e.r);
-    const matches = qtree.query(range).filter((m) => m instanceof Plant);
+    const matches = qtree.queryAll(range, (e) => (e instanceof Nutrient));
     for (let m of matches) {
       if (e !== m && e.intersects(m)) {
+        push();
         stroke(255);
-        strokeWeight(2);
+        strokeWeight(1);
         circle(e.pos.x, e.pos.y, e.r+10);
+        pop();
       }
     }
-  }*/
+  }
 }
 
 

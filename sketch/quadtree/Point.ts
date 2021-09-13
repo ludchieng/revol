@@ -3,15 +3,15 @@
 // 2: https://www.youtube.com/watch?v=QQx_NmCIuCY
 // https://github.com/CodingTrain/QuadTree
 
-class Point {
+class Point<T> {
 
   x: number;
   y: number;
   scanned = false;
   selected = false;
-  data: any;
+  data: T;
 
-  constructor(x: number, y: number, data: any) {
+  constructor(x: number, y: number, data: T) {
     this.x = x;
     this.y = y;
     this.data = data;

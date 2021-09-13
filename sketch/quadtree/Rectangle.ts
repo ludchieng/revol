@@ -16,7 +16,7 @@ class Rectangle {
     this.h = h;
   }
 
-  contains(point: Point) {
+  contains(point: Point<any>) {
     return (point.x >= this.x - this.w &&
       point.x <= this.x + this.w &&
       point.y >= this.y - this.h &&

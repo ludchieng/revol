@@ -5,7 +5,7 @@ var view;
 var mousepoint;
 function setup() {
     createCanvas(windowWidth, windowHeight);
-    noFill().frameRate(60);
+    noFill().noStroke().frameRate(60);
     view = new View(width / 2, height / 2, 0.89);
     entities = new EntitiesList();
     for (var i = 0; i < 50; i++) {
@@ -24,7 +24,7 @@ function mousePressed() {
     if (mouseButton === LEFT) {
         quadtree();
         mousepoint = createVector(mouseX - view.x, mouseY - view.y).div(view.scale());
-        qtreeVisitor = new QuadTreeVisitor(mousepoint.x, mousepoint.y, { dist: width + height, p: null }, qtree);
+        qtreeVisitor = new QuadTreeVisitor(mousepoint.x, mousepoint.y, qtree);
         qtreeVisitor.visitNextNode();
     }
     else {
@@ -35,6 +35,7 @@ function draw() {
     view.update();
     view.debug();
     background(0);
+    quadtree();
     for (var _i = 0, _a = entities.all(); _i < _a.length; _i++) {
         var e = _a[_i];
         e.update();
@@ -50,6 +51,21 @@ function draw() {
         pop();
     }
     entities.updateLists();
+    for (var _b = 0, _c = entities.all(); _b < _c.length; _b++) {
+        var e = _c[_b];
+        var range = new Circle(e.pos.x, e.pos.y, e.r);
+        var matches = qtree.queryAll(range, function (e) { return (e instanceof Nutrient); });
+        for (var _d = 0, matches_1 = matches; _d < matches_1.length; _d++) {
+            var m = matches_1[_d];
+            if (e !== m && e.intersects(m)) {
+                push();
+                stroke(255);
+                strokeWeight(1);
+                circle(e.pos.x, e.pos.y, e.r + 10);
+                pop();
+            }
+        }
+    }
 }
 function quadtree() {
     var boundary = new Rectangle(0, 0, width, height);
@@ -76,7 +92,7 @@ var View = (function () {
         translate(this.x, this.y);
         scale(this.scale());
         this.applyTransform();
-        if (mouseIsPressed && mouseButton === RIGHT) {
+        if (mouseIsPressed && mouseButton === CENTER) {
             this.x += movedX;
             this.y += movedY;
         }
@@ -309,7 +325,9 @@ var Worm = (function (_super) {
         pop();
     };
     Worm.prototype.steerEat = function () {
-        var closest;
+        var nearest = qtree.nearest(this.pos.x, this.pos.y);
+        if (!nearest)
+            return;
         return createVector(0, 0);
     };
     Worm.prototype.steerAvoid = function () {
@@ -424,20 +442,26 @@ var QuadTree = (function () {
             return true;
         }
     };
-    QuadTree.prototype.query = function (range, found) {
+    QuadTree.prototype.nearest = function (x, y, filter) {
+        var visitor = new QuadTreeVisitor(x, y, this, filter);
+        visitor.visit();
+        return (visitor.best.p) ? visitor.best.p.data : null;
+    };
+    QuadTree.prototype.queryAll = function (range, filter, found) {
+        if (filter === void 0) { filter = function (e) { return true; }; }
         if (!found)
             found = [];
         if (!range.intersects(this.boundary))
-            return found;
+            return found.map(function (p) { return p.data; });
         for (var _i = 0, _a = this.points; _i < _a.length; _i++) {
             var p = _a[_i];
-            if (range.contains(p))
+            if (range.contains(p) && filter(p.data))
                 found.push(p);
         }
         if (this.divided) {
             for (var _b = 0, _c = this.children(); _b < _c.length; _b++) {
                 var child = _c[_b];
-                child.query(range, found);
+                child.queryAll(range, filter, found);
             }
         }
         return found.map(function (p) { return p.data; });
@@ -450,30 +474,26 @@ var QuadTree = (function () {
             }
         }
         else {
+            push();
+            stroke(255, 30);
+            strokeWeight(3);
+            if (this.visited) {
+                strokeWeight(5);
+                stroke(0, 255, 255);
+            }
+            if (this.ignore) {
+                strokeWeight(5);
+                stroke(255, 255, 0);
+            }
+            rectMode(CENTER);
+            rect(this.boundary.x, this.boundary.y, this.boundary.w * 2, this.boundary.h * 2);
+            pop();
         }
         push();
-        stroke(255, 30);
         strokeWeight(1);
-        noFill();
-        if (this.visited) {
-            strokeWeight(5);
-            stroke(0, 255, 255);
-        }
-        if (this.ignore) {
-            strokeWeight(5);
-            stroke(255, 255, 0);
-        }
-        rectMode(CENTER);
-        rect(this.boundary.x, this.boundary.y, this.boundary.w * 2, this.boundary.h * 2);
-        pop();
-        push();
-        strokeWeight(2);
+        stroke(255, 200);
         for (var _b = 0, _c = this.points; _b < _c.length; _b++) {
             var p = _c[_b];
-            if (p.scanned)
-                stroke(255, 150, 0);
-            else if (p.selected)
-                stroke(0, 255, 255);
             line(p.x - 10, p.y, p.x + 10, p.y);
             line(p.x, p.y - 10, p.x, p.y + 10);
         }
@@ -482,14 +502,20 @@ var QuadTree = (function () {
     return QuadTree;
 }());
 var QuadTreeVisitor = (function () {
-    function QuadTreeVisitor(x, y, best, node) {
+    function QuadTreeVisitor(x, y, qtree, filter) {
         this.x = x;
         this.y = y;
-        this.root = node;
+        this.root = qtree;
         this.currentNode = null;
-        this.best = best;
+        this.filter = filter || (function () { return true; });
+        this.best = { dist: qtree.boundary.w * 2 + qtree.boundary.h * 2, p: null };
         this.root.prepareForVisit();
     }
+    QuadTreeVisitor.prototype.visit = function () {
+        do {
+            this.visitNextNode();
+        } while (this.currentNode !== this.root);
+    };
     QuadTreeVisitor.prototype.visitNextNode = function () {
         this.selectNextNode();
         var node = this.currentNode;
@@ -509,7 +535,7 @@ var QuadTreeVisitor = (function () {
             if (p) {
                 p.scanned = true;
                 var dx = p.x - x, dy = p.y - y, distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance < this.best.dist) {
+                if (distance < this.best.dist && this.filter(p.data)) {
                     this.best.dist = distance;
                     if (this.best.p && this.best.p.selected)
                         this.best.p.selected = false;
@@ -561,7 +587,7 @@ var QuadTreeVisitor = (function () {
         rectMode(CENTER);
         if (this.currentNode)
             rect(this.currentNode.boundary.x, this.currentNode.boundary.y, this.currentNode.boundary.w * 2, this.currentNode.boundary.h * 2);
-        fill(50, 255, 80);
+        fill(255);
         if (this.best.p)
             circle(this.best.p.x, this.best.p.y, 20);
         pop();

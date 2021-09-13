@@ -16,7 +16,7 @@ class Circle {
     this.rSquared = this.r * this.r;
   }
 
-  contains(point: Point) {
+  contains(point: Point<any>) {
     // check if the point is in the circle by checking if the euclidean distance of
     // the point and the center of the circle if smaller or equal to the radius of
     // the circle

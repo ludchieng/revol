@@ -1,24 +1,35 @@
-type MatchPoint = {
+type MatchPoint<T> = {
   dist: number,
-  p: Point | null,
+  p: Point<T> | null,
 };
 
-class QuadTreeVisitor {
+class QuadTreeVisitor<T> {
 
   x: number;
   y: number;
-  root: QuadTree;
-  currentNode: QuadTree;
-  best: MatchPoint;
+  root: QuadTree<T>;
+  currentNode: QuadTree<T>;
+  best: MatchPoint<T>;
+  filter: (e: T) => boolean; // condition that the element shoud satisfy
 
-  constructor(x: number, y: number, best: MatchPoint, node: QuadTree) {
+  constructor(
+    x: number, y: number, qtree: QuadTree<T>,
+    filter?: (e?: T) => boolean
+  ) {
     this.x = x;
     this.y = y;
-    this.root = node;
+    this.root = qtree;
     this.currentNode = null;
-    this.best = best;
+    this.filter = filter || (() => true);
+    this.best = { dist: qtree.boundary.w*2 + qtree.boundary.h*2, p: null };
 
     this.root.prepareForVisit();
+  }
+
+  visit() {
+    do {
+      this.visitNextNode();
+    } while (this.currentNode !== this.root);
   }
 
   visitNextNode() {
@@ -41,7 +52,7 @@ class QuadTreeVisitor {
       if (p) {
         p.scanned = true;
         let dx = p.x - x, dy = p.y - y, distance = Math.sqrt(dx*dx + dy*dy);
-        if (distance < this.best.dist) {
+        if (distance < this.best.dist && this.filter(p.data)) {
           this.best.dist = distance;
 
           if ( this.best.p && this.best.p.selected )
@@ -63,7 +74,7 @@ class QuadTreeVisitor {
     const parent = this.currentNode;
     const children = this.currentNode.children();
   
-    // given the clicked coordinate, find the child node that the coordinate would
+    // given the subject position, find the child node that the coordinate would
     // fall into to. then recurse on this child first.
     const rl: any = (2*this.x > this.currentNode.boundary.x1() + this.currentNode.boundary.x2())
     const bt: any = (2 * this.y > this.currentNode.boundary.y1() + this.currentNode.boundary.y2());
@@ -71,7 +82,7 @@ class QuadTreeVisitor {
     // If we're still interested in children...
     if ( ! this.currentNode.ignore ) {
       // Select a child to drill down into with priority to the one that contains
-      // the click. Don't visit if it's already been visited.
+      // the subject. Don't visit if it's already been visited.
       if (children[bt*2+rl] && ! children[bt*2+rl].visited)  {
         this.currentNode = children[bt*2+rl];
       } else if (children[bt*2+(1-rl)] && ! children[bt*2+(1-rl)].visited) {
@@ -101,12 +112,12 @@ class QuadTreeVisitor {
     push();
     stroke(255, 0, 255, 200);
     strokeWeight(6);
-    rectMode(CENTER)
+    rectMode(CENTER);
     if (this.currentNode)
       rect(this.currentNode.boundary.x, this.currentNode.boundary.y, this.currentNode.boundary.w*2, this.currentNode.boundary.h*2);
-    fill(50, 255, 80)
+    fill(255);
     if (this.best.p)
-      circle(this.best.p.x, this.best.p.y, 20)
+      circle(this.best.p.x, this.best.p.y, 20);
     pop();
   }
 }

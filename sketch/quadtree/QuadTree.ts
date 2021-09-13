@@ -3,23 +3,23 @@
 // 2: https://www.youtube.com/watch?v=QQx_NmCIuCY
 // https://github.com/CodingTrain/QuadTree
 
-class QuadTree {
+class QuadTree<T> {
   
-  parent: QuadTree;
+  parent: QuadTree<T>;
   boundary: Rectangle;
   capacity: number;
-  points: Point[] = [];
+  points: Point<T>[] = [];
   divided = false;
 
-  ne: QuadTree;
-  nw: QuadTree;
-  se: QuadTree;
-  sw: QuadTree;
+  ne: QuadTree<T>;
+  nw: QuadTree<T>;
+  se: QuadTree<T>;
+  sw: QuadTree<T>;
 
   visited = false;
   ignore = false;
 
-  constructor(boundary: Rectangle, capacity: number, parent: QuadTree = null) {
+  constructor(boundary: Rectangle, capacity: number, parent: QuadTree<T> = null) {
     if (!boundary)
       throw TypeError('boundary is null or undefined');
 
@@ -74,7 +74,7 @@ class QuadTree {
     return [this.nw, this.ne, this.sw, this.se];
   }
 
-  insert(point: Point) {
+  insert(point: Point<T>): boolean {
     if (!this.boundary.contains(point))
       return false;
 
@@ -93,20 +93,33 @@ class QuadTree {
     }
   }
 
-  query(range: Rectangle | Circle, found?: Point[]) {
+  nearest(
+    x: number, y: number,
+    filter?: (e?: T) => boolean,
+  ): T | null {
+    const visitor = new QuadTreeVisitor(x, y, this, filter);
+    visitor.visit();
+    return (visitor.best.p) ? visitor.best.p.data : null;
+  }
+
+  queryAll(
+    range: Rectangle | Circle,
+    filter = (e?: T) => true,
+    found?: Point<T>[]
+  ): T[] {
     if (!found)
       found = [];
 
     if (!range.intersects(this.boundary))
-      return found;
+      return found.map((p) => p.data);
 
     for (let p of this.points)
-      if (range.contains(p))
+      if (range.contains(p) && filter(p.data))
         found.push(p);
     
     if (this.divided) {
       for (const child of this.children())
-        child.query(range, found);
+        child.queryAll(range, filter, found);
     }
 
     return found.map((p) => p.data);
@@ -118,30 +131,26 @@ class QuadTree {
         child.render();
 
     } else {
+      push();
+      stroke(255, 30);
+      strokeWeight(3);
+      if (this.visited) {
+        strokeWeight(5);
+        stroke(0, 255, 255)
+      }
+      if (this.ignore) {
+        strokeWeight(5);
+        stroke(255, 255, 0)
+      }
+      rectMode(CENTER);
+      rect(this.boundary.x, this.boundary.y, this.boundary.w * 2, this.boundary.h * 2);
+      pop();
     }
-    push();
-    stroke(255, 30);
-    strokeWeight(1);
-    noFill();
-    if (this.visited) {
-      strokeWeight(5);
-      stroke(0, 255, 255)
-    }
-    if (this.ignore) {
-      strokeWeight(5);
-      stroke(255, 255, 0)
-    }
-    rectMode(CENTER);
-    rect(this.boundary.x, this.boundary.y, this.boundary.w * 2, this.boundary.h * 2);
-    pop();
 
     push();
-    strokeWeight(2)
+    strokeWeight(1);
+    stroke(255, 200);
     for (const p of this.points) {
-      if (p.scanned)
-        stroke(255, 150, 0)
-      else if (p.selected)
-        stroke(0, 255, 255)
       line(p.x-10, p.y, p.x+10, p.y)
       line(p.x, p.y-10, p.x, p.y+10)
     }

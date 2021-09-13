@@ -40,9 +40,11 @@ class Worm extends Living {
   }
 
   steerEat() {
-    let closest;
-    //for
-    // oskour http://ericandrewlewis.github.io/how-a-quadtree-works/
+    let nearest = qtree.nearest(this.pos.x, this.pos.y);
+    
+    if (!nearest)
+      return;
+    
     return createVector(0, 0);
   }
 
