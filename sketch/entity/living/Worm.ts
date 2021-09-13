@@ -4,6 +4,8 @@ class Worm extends Living {
   
   static DEFAULT_GENES: GenesType = {
     maxHp: 5,
+    lossHp: 1,
+    breedHpFactor: 2,
     maxSpeed: 2,
     maxForceFactor: 0.1,
     eatWeight: 2,
@@ -20,26 +22,23 @@ class Worm extends Living {
     genes = {
       ...genes,
       maxHp: genes.maxHp * random(0.95, 1.05),
+      lossHp: genes.lossHp * random(0.9, 1.1),
+      breedHpFactor: genes.breedHpFactor * random(0.9, 1.1),
       maxSpeed: genes.maxSpeed * random(0.95, 1.05),
       maxForceFactor: genes.maxForceFactor * random(0.95, 1.05),
+      eatWeight: genes.eatWeight * random(0.9, 1.1),
+      avoidWeight: genes.avoidWeight * random(0.9, 1.1),
+      eatPerception: genes.eatPerception * random(0.9, 1.1),
+      avoidPerception: genes.avoidPerception * random(0.9, 1.1),
     }
     super(x, y, Worm.RADIUS, genes);
     this.vel = p5.Vector.random2D().mult(random(1.5, 2.5));
   }
 
-  clone() {
-    entities.add(new Worm(
-      this.pos.x + random(-this.genes.breedDist, this.genes.breedDist),
-      this.pos.y + random(-this.genes.breedDist, this.genes.breedDist),
-      this.genes));
-  }
-
   update() {
     super.update();
-    const age = frameCount - this.birthFrame;
-    if (age > this.genes.matureAge && random(1) < 0.1) {
-      this.clone();
-    }
+    this.tryBreed();
+    this.tryDefecate();
   }
 
   render() {
@@ -51,13 +50,15 @@ class Worm extends Living {
     pop();
 
     // Eat perception
-    push();
-    stroke(0, 255, 0);
-    strokeWeight(1);
-    noFill();
-    circle(this.pos.x, this.pos.y, this.genes.eatPerception*2);
-    pop();
-
+    if (keyIsDown && key === '0') {
+      push();
+      stroke(0, 255, 0);
+      strokeWeight(1);
+      noFill();
+      circle(this.pos.x, this.pos.y, this.genes.eatPerception*2);
+      pop();
+    }
+/*
     if (this.target) {
       push();
       stroke(255, 0, 255);
@@ -65,7 +66,14 @@ class Worm extends Living {
       noFill();
       circle(this.target.pos.x, this.target.pos.y, this.target.r + 10);
       pop();
-    }
+    }*/
+  }
+
+  tryBreed() {
+    if (this.hp < this.genes.breedHpFactor * this.genes.maxHp)
+      return;
+    this.hp /= 2;
+    entities.add(new Worm(this.pos.x, this.pos.y, this.genes));
   }
 
   tryEat(p: Plant) {
@@ -73,6 +81,16 @@ class Worm extends Living {
       return;
     this.hp += p.hp;
     p.hp = 0;
+  }
+
+  tryDefecate() {
+    if (random(1) > 0.01)
+      return;
+    this.hp -= this.genes.lossHp;
+    entities.add(new Nutrient(
+      this.pos.x, this.pos.y,
+      this.r * random(15, 30), this.genes.lossHp
+    ));
   }
 
   steerApproach() {

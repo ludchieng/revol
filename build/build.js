@@ -5,15 +5,18 @@ var view;
 var mousepoint;
 function setup() {
     createCanvas(windowWidth, windowHeight);
-    frameRate(60).noFill().noStroke().rectMode(CENTER);
+    frameRate(30).noFill().noStroke().rectMode(CENTER);
     view = new View(width / 2, height / 2, 0.89);
     entities = new EntitiesList();
     for (var i = 0; i < 50; i++) {
         var x = randomGaussian(0, width * 2);
         var y = randomGaussian(0, height * 2);
-        entities.add(new Nutrient(x, y, random(50, 400), random(2, 20)));
+        var n = new Nutrient(x, y, random(50, 400), random(2, 20));
+        n.ageGrowPlants = 0;
+        n.pGrowPlants = Infinity;
+        entities.add(n);
     }
-    for (var i = 0; i < 1; i++) {
+    for (var i = 0; i < 20; i++) {
         entities.add(new Worm(random(-width, width), random(-height, height)));
     }
 }
@@ -27,14 +30,17 @@ function draw() {
     view.update();
     view.debug();
     background(0);
+    push();
+    stroke(255);
+    strokeWeight(1);
+    rect(0, 0, max(width, height) * 2, max(width, height) * 2);
+    pop();
     quadtree();
     for (var _i = 0, _a = entities.all(); _i < _a.length; _i++) {
         var e = _a[_i];
         e.update();
         e.render();
     }
-    qtree && qtree.render();
-    qtreeVisitor && qtreeVisitor.render();
     if (mousepoint) {
         push();
         fill(255, 50, 50);
@@ -112,8 +118,19 @@ var EntitiesList = (function () {
         this.worms = [];
     }
     EntitiesList.prototype.add = function (e) {
-        if (e instanceof Nutrient)
-            this.nutrients.push(e);
+        if (e instanceof Nutrient) {
+            var neighboors = (qtree)
+                ? qtree.queryAll(new Circle(e.pos.x, e.pos.y, 16), function (e) { return (e instanceof Nutrient); })
+                : [];
+            if (neighboors.length > 0) {
+                var receiver = neighboors[floor(random(neighboors.length))];
+                receiver.nutrition += e.nutrition;
+                receiver.r += e.nutrition * 10;
+            }
+            else {
+                this.nutrients.push(e);
+            }
+        }
         if (e instanceof Plant)
             this.plants.push(e);
         if (e instanceof Worm)
@@ -150,7 +167,11 @@ var Entity = (function () {
         this.pos = createVector(x, y);
         this.maxSpeed = maxSpeed;
         this.r = r;
+        this.birthFrame = frameCount;
     }
+    Entity.prototype.age = function () {
+        return frameCount - this.birthFrame;
+    };
     Entity.prototype.applyForce = function (force) {
         this.acc.add(force);
     };
@@ -193,14 +214,23 @@ var Nutrient = (function (_super) {
     __extends(Nutrient, _super);
     function Nutrient(x, y, r, nutrition) {
         var _this = _super.call(this, x, y, r) || this;
+        _this.pGrowPlants = 0.05;
         _this.nutrition = nutrition;
+        _this.ageGrowPlants = Nutrient.AGE_GROW_PLANTS_MEAN * random(0.6, 1.4);
         return _this;
     }
     Nutrient.prototype.update = function () {
         _super.prototype.update.call(this);
-        if (this.nutrition > 0 && random(1) < 0.2) {
-            var p = new Plant(randomGaussian(this.pos.x, this.r * 0.5), randomGaussian(this.pos.y, this.r * 0.5));
-            this.nutrition -= p.genes.maxHp;
+        this.tryGrowPlant();
+    };
+    Nutrient.prototype.tryGrowPlant = function () {
+        if (this.age() < this.ageGrowPlants)
+            return;
+        if (this.nutrition > 0
+            && random(1) < sq(this.nutrition * this.pGrowPlants)) {
+            var plantMaxHp = min(this.nutrition, Plant.DEFAULT_GENES.maxHp);
+            var p = new Plant(randomGaussian(this.pos.x, this.r * 0.5), randomGaussian(this.pos.y, this.r * 0.5), { maxHp: plantMaxHp });
+            this.nutrition -= plantMaxHp;
             entities.add(p);
         }
     };
@@ -211,6 +241,7 @@ var Nutrient = (function (_super) {
         circle(this.pos.x, this.pos.y, this.r);
         pop();
     };
+    Nutrient.AGE_GROW_PLANTS_MEAN = 50;
     return Nutrient;
 }(Entity));
 var __assign = (this && this.__assign) || function () {
@@ -233,7 +264,6 @@ var Living = (function (_super) {
         _this = _super.call(this, x, y, r, genes.maxSpeed) || this;
         _this.genes = genes;
         _this.hp = genes.maxHp;
-        _this.birthFrame = frameCount;
         return _this;
     }
     Living.prototype.dead = function () {
@@ -273,7 +303,7 @@ var Plant = (function (_super) {
         if (genes === void 0) { genes = {}; }
         var _this = this;
         genes = __assign(__assign({}, Plant.DEFAULT_GENES), genes);
-        genes = __assign(__assign({}, genes), { maxHp: Plant.DEFAULT_GENES.maxHp * random(0.9, 1.1) });
+        genes = __assign({}, genes);
         _this = _super.call(this, x, y, Plant.RADIUS, genes) || this;
         _super.prototype.boundaries.call(_this);
         return _this;
@@ -309,20 +339,15 @@ var Worm = (function (_super) {
         if (genes === void 0) { genes = {}; }
         var _this = this;
         genes = __assign(__assign({}, Worm.DEFAULT_GENES), genes);
-        genes = __assign(__assign({}, genes), { maxHp: genes.maxHp * random(0.95, 1.05), maxSpeed: genes.maxSpeed * random(0.95, 1.05), maxForceFactor: genes.maxForceFactor * random(0.95, 1.05) });
+        genes = __assign(__assign({}, genes), { maxHp: genes.maxHp * random(0.95, 1.05), lossHp: genes.lossHp * random(0.9, 1.1), breedHpFactor: genes.breedHpFactor * random(0.9, 1.1), maxSpeed: genes.maxSpeed * random(0.95, 1.05), maxForceFactor: genes.maxForceFactor * random(0.95, 1.05), eatWeight: genes.eatWeight * random(0.9, 1.1), avoidWeight: genes.avoidWeight * random(0.9, 1.1), eatPerception: genes.eatPerception * random(0.9, 1.1), avoidPerception: genes.avoidPerception * random(0.9, 1.1) });
         _this = _super.call(this, x, y, Worm.RADIUS, genes) || this;
         _this.vel = p5.Vector.random2D().mult(random(1.5, 2.5));
         return _this;
     }
-    Worm.prototype.clone = function () {
-        entities.add(new Worm(this.pos.x + random(-this.genes.breedDist, this.genes.breedDist), this.pos.y + random(-this.genes.breedDist, this.genes.breedDist), this.genes));
-    };
     Worm.prototype.update = function () {
         _super.prototype.update.call(this);
-        var age = frameCount - this.birthFrame;
-        if (age > this.genes.matureAge && random(1) < 0.1) {
-            this.clone();
-        }
+        this.tryBreed();
+        this.tryDefecate();
     };
     Worm.prototype.render = function () {
         push();
@@ -331,26 +356,32 @@ var Worm = (function (_super) {
         fill(lerpColor(color(50, 20, 10), color(255, 200, 128), this.hp / this.genes.maxHp));
         rect(0, 0, this.r, this.r * 4);
         pop();
-        push();
-        stroke(0, 255, 0);
-        strokeWeight(1);
-        noFill();
-        circle(this.pos.x, this.pos.y, this.genes.eatPerception * 2);
-        pop();
-        if (this.target) {
+        if (keyIsDown && key === '0') {
             push();
-            stroke(255, 0, 255);
-            strokeWeight(2);
+            stroke(0, 255, 0);
+            strokeWeight(1);
             noFill();
-            circle(this.target.pos.x, this.target.pos.y, this.target.r + 10);
+            circle(this.pos.x, this.pos.y, this.genes.eatPerception * 2);
             pop();
         }
+    };
+    Worm.prototype.tryBreed = function () {
+        if (this.hp < this.genes.breedHpFactor * this.genes.maxHp)
+            return;
+        this.hp /= 2;
+        entities.add(new Worm(this.pos.x, this.pos.y, this.genes));
     };
     Worm.prototype.tryEat = function (p) {
         if (this.pos.dist(p.pos) > this.r)
             return;
         this.hp += p.hp;
         p.hp = 0;
+    };
+    Worm.prototype.tryDefecate = function () {
+        if (random(1) > 0.01)
+            return;
+        this.hp -= this.genes.lossHp;
+        entities.add(new Nutrient(this.pos.x, this.pos.y, this.r * random(15, 30), this.genes.lossHp));
     };
     Worm.prototype.steerApproach = function () {
         var food = qtree.nearest(this.pos.x, this.pos.y, function (e) { return (e instanceof Plant); }, this.genes.eatPerception);
@@ -369,6 +400,8 @@ var Worm = (function (_super) {
     Worm.RADIUS = 4;
     Worm.DEFAULT_GENES = {
         maxHp: 5,
+        lossHp: 1,
+        breedHpFactor: 2,
         maxSpeed: 2,
         maxForceFactor: 0.1,
         eatWeight: 2,

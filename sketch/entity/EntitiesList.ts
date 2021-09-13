@@ -7,8 +7,22 @@ class EntitiesList {
   constructor() {}
 
   add(e: Entity) {
-    if (e instanceof Nutrient)
-      this.nutrients.push(e);
+    if (e instanceof Nutrient) {
+      const neighboors: Nutrient[] = (qtree)
+      ? qtree.queryAll(
+          new Circle(e.pos.x, e.pos.y, 16),
+          (e: Entity) => (e instanceof Nutrient)
+        ) as Nutrient[]
+      : [];
+      
+      if (neighboors.length > 0) {
+        const receiver = neighboors[floor(random(neighboors.length))];
+        receiver.nutrition += e.nutrition;
+        receiver.r += e.nutrition * 10;
+      } else {
+        this.nutrients.push(e);
+      }
+    }
     if (e instanceof Plant)
       this.plants.push(e);
     if (e instanceof Worm)

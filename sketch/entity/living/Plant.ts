@@ -16,7 +16,6 @@ class Plant extends Living {
     genes = { ...Plant.DEFAULT_GENES, ...genes };
     genes = {
       ...genes,
-      maxHp: Plant.DEFAULT_GENES.maxHp * random(0.9, 1.1),
     };
     super(x, y, Plant.RADIUS, genes);
     super.boundaries();

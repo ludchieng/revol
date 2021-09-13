@@ -17,8 +17,6 @@ abstract class Living extends Entity {
   genes: GenesType;
   hp: number;
 
-  birthFrame: number;
-
   constructor(
     x: number, y: number, r = Living.RADIUS,
     genes: GenesType,
@@ -30,7 +28,6 @@ abstract class Living extends Entity {
     super(x, y, r, genes.maxSpeed);
     this.genes = genes;
     this.hp = genes.maxHp;
-    this.birthFrame = frameCount;
   }
 
   dead() {

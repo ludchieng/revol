@@ -7,10 +7,17 @@ class Entity {
   maxSpeed: number = Infinity;
   r: number;
 
+  birthFrame: number;
+
   constructor(x: number, y: number, r = 8, maxSpeed?: number) {
     this.pos = createVector(x, y);
     this.maxSpeed = maxSpeed;
     this.r = r;
+    this.birthFrame = frameCount;
+  }
+
+  age() {
+    return frameCount - this.birthFrame;
   }
 
   applyForce(force: p5.Vector) {
