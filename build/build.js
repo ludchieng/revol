@@ -23,18 +23,6 @@ function windowResized() {
 function mouseWheel(e) {
     view.zoom(e.delta);
 }
-function mousePressed() {
-    if (mouseButton === LEFT) {
-        quadtree();
-        mousepoint = createVector(mouseX - view.x, mouseY - view.y).div(view.scale());
-        console.log(+mousepoint.x.toFixed(0), +mousepoint.y.toFixed(0));
-        qtreeVisitor = new QuadTreeVisitor(mousepoint.x, mousepoint.y, qtree);
-        qtreeVisitor.visitNextNode();
-    }
-    else {
-        qtreeVisitor.visitNextNode();
-    }
-}
 function draw() {
     view.update();
     view.debug();
@@ -71,7 +59,7 @@ function draw() {
     }
 }
 function quadtree() {
-    var boundary = new Rectangle(0, 0, width, height);
+    var boundary = new Rectangle(0, 0, max(width, height), max(width, height));
     qtree = new QuadTree(boundary, 4);
     for (var _i = 0, _a = entities.all(); _i < _a.length; _i++) {
         var e = _a[_i];
@@ -95,7 +83,7 @@ var View = (function () {
         translate(this.x, this.y);
         scale(this.scale());
         this.applyTransform();
-        if (mouseIsPressed && mouseButton === CENTER) {
+        if (mouseIsPressed && (mouseButton === CENTER || mouseButton === RIGHT)) {
             this.x += movedX;
             this.y += movedY;
         }
@@ -177,14 +165,14 @@ var Entity = (function () {
         this.boundaries();
     };
     Entity.prototype.boundaries = function () {
-        if (this.pos.x > width)
-            this.pos.x -= 2 * width;
-        if (this.pos.x < -width)
-            this.pos.x += 2 * width;
-        if (this.pos.y > height)
-            this.pos.y -= 2 * height;
-        if (this.pos.y < -height)
-            this.pos.y += 2 * height;
+        if (this.pos.x > qtree.boundary.w)
+            this.pos.x -= 2 * qtree.boundary.w;
+        if (this.pos.x < -qtree.boundary.w)
+            this.pos.x += 2 * qtree.boundary.w;
+        if (this.pos.y > qtree.boundary.h)
+            this.pos.y -= 2 * qtree.boundary.h;
+        if (this.pos.y < -qtree.boundary.h)
+            this.pos.y += 2 * qtree.boundary.h;
     };
     return Entity;
 }());

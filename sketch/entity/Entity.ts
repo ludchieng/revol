@@ -30,13 +30,13 @@ class Entity {
   }
 
   boundaries() {
-    if (this.pos.x > width)
-      this.pos.x -= 2 * width;
-    if (this.pos.x < -width)
-      this.pos.x += 2 * width;
-    if (this.pos.y > height)
-      this.pos.y -= 2 * height;
-    if (this.pos.y < -height)
-      this.pos.y += 2 * height;
+    if (this.pos.x > qtree.boundary.w)
+      this.pos.x -= 2 * qtree.boundary.w;
+    if (this.pos.x < -qtree.boundary.w)
+      this.pos.x += 2 * qtree.boundary.w;
+    if (this.pos.y > qtree.boundary.h)
+      this.pos.y -= 2 * qtree.boundary.h;
+    if (this.pos.y < -qtree.boundary.h)
+      this.pos.y += 2 * qtree.boundary.h;
   }
 }

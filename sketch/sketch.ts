@@ -35,19 +35,6 @@ function mouseWheel(e: {delta: number}) {
 }
 
 
-function mousePressed() {
-  if (mouseButton === LEFT) {
-    quadtree();
-    mousepoint = createVector(mouseX - view.x, mouseY - view.y).div(view.scale());
-    console.log(+mousepoint.x.toFixed(0), +mousepoint.y.toFixed(0))
-    qtreeVisitor = new QuadTreeVisitor<Entity>(mousepoint.x, mousepoint.y, qtree)
-    qtreeVisitor.visitNextNode();
-  } else {
-    qtreeVisitor.visitNextNode();
-  }
-}
-
-
 function draw() {
   view.update();
   view.debug();
@@ -90,7 +77,7 @@ function draw() {
 
 
 function quadtree() {
-  const boundary = new Rectangle(0, 0, width, height);
+  const boundary = new Rectangle(0, 0, max(width, height), max(width, height));
   qtree = new QuadTree(boundary, 4);
 
   for (const e of entities.all()) {

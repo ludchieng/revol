@@ -22,7 +22,7 @@ class View {
     scale(this.scale());
     this.applyTransform();
 
-    if (mouseIsPressed && mouseButton === CENTER) {
+    if (mouseIsPressed && (mouseButton === CENTER || mouseButton === RIGHT)) {
       this.x += movedX;
       this.y += movedY;
     }
