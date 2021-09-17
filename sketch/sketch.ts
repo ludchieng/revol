@@ -3,6 +3,7 @@ let entities: EntitiesList;
 let qtree: QuadTree<Entity>;
 let qtreeVisitor: QuadTreeVisitor<Entity>;
 let view: View;
+let chart: LineChart;
 
 let mousepoint: p5.Vector;
 
@@ -13,18 +14,24 @@ function setup() {
   view = new View(width/2, height/2, 0.89);
   entities = new EntitiesList();
 
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 40; i++) {
     const x = randomGaussian(0, width * 2);
     const y = randomGaussian(0, height * 2);
-    const n = new Nutrient(x, y, random(50, 400), random(2, 20))
+    const n = new Nutrient(x, y, random(50, 400), ceil(random(2, 20)))
     n.ageGrowPlants = 0;
     n.pGrowPlants = Infinity;
     entities.add(n);
   }
 
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 60; i++) {
     entities.add(new Worm(random(-width, width), random(-height, height)));
   }
+
+  for (let i = 0; i < 5; i++) {
+    entities.add(new Chicken(random(-width, width), random(-height, height)));
+  }
+
+  // chart = new LineChart(50, 50);
 }
 
 
@@ -43,11 +50,6 @@ function draw() {
   view.debug();
   
   background(0);
-  push();
-  stroke(255);
-  strokeWeight(1);
-  rect(0, 0, max(width, height)*2, max(width, height)*2);
-  pop();
 
   quadtree();
   
@@ -79,11 +81,19 @@ function draw() {
       }
     }
   }
+  
+  push();
+  stroke(255);
+  strokeWeight(1);
+  rect(0, 0, 1800, 1800);
+  pop();
+
+  // chart.render();
 }
 
 
 function quadtree() {
-  const boundary = new Rectangle(0, 0, max(width, height), max(width, height));
+  const boundary = new Rectangle(0, 0, 900, 900);
   qtree = new QuadTree(boundary, 4);
 
   for (const e of entities.all()) {

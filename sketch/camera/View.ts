@@ -23,8 +23,8 @@ class View {
     this.applyTransform();
 
     if (mouseIsPressed && (mouseButton === CENTER || mouseButton === RIGHT)) {
-      this.x += movedX;
-      this.y += movedY;
+      this.x += movedX * 2;
+      this.y += movedY * 2;
     }
   }
 

@@ -3,6 +3,7 @@ class EntitiesList {
   nutrients: Nutrient[] = [];
   plants: Plant[] = [];
   worms: Worm[] = [];
+  chickens: Chicken[] = [];
 
   constructor() {}
 
@@ -10,12 +11,13 @@ class EntitiesList {
     if (e instanceof Nutrient) {
       const neighboors: Nutrient[] = (qtree)
       ? qtree.queryAll(
-          new Circle(e.pos.x, e.pos.y, 16),
+          new Circle(e.pos.x, e.pos.y, 40),
           (e: Entity) => (e instanceof Nutrient)
         ) as Nutrient[]
       : [];
       
       if (neighboors.length > 0) {
+        // Agregate new nutrient with an existing one
         const receiver = neighboors[floor(random(neighboors.length))];
         receiver.nutrition += e.nutrition;
         receiver.r += e.nutrition * 10;
@@ -27,6 +29,8 @@ class EntitiesList {
       this.plants.push(e);
     if (e instanceof Worm)
       this.worms.push(e);
+    if (e instanceof Chicken)
+      this.chickens.push(e);
   }
 
   all() {
@@ -34,6 +38,7 @@ class EntitiesList {
       ...this.nutrients,
       ...this.plants,
       ...this.worms,
+      ...this.chickens,
     ];
   }
 
@@ -56,5 +61,18 @@ class EntitiesList {
       }
     }
     
+    for (let i = this.chickens.length-1; i >= 0; i--) {
+      if (this.chickens[i].dead()) {
+        this.chickens.splice(i, 1);
+      }
+    }
+    
+  }
+
+  energySum() {
+    return this.nutrients.reduce((acc, n) => acc + n.nutrition, 0)
+      + this.plants.reduce((acc, p) => acc + p.hp, 0)
+      + this.worms.reduce((acc, w) => acc + w.hp, 0)
+      + this.chickens.reduce((acc, c) => acc + c.hp, 0)
   }
 }

@@ -1,27 +1,40 @@
-class Worm extends Living {
+class Worm extends Animal {
 
   static RADIUS = 6;
   
   static DEFAULT_GENES: GenesType = {
-    maxHp: 5,
+    maxHp: 3,
     lossHp: 1,
     breedHpFactor: 2,
     maxSpeed: 3,
-    maxForceFactor: 0.2,
+    maxForceFactor: 0.3,
     eatWeight: 2,
-    avoidWeight: -2,
+    avoidWeight: -5,
     eatPerception: 80,
-    avoidPerception: 80,
+    avoidPerception: 200,
+    ageNextDefecateMean: 100,
   };
 
-  //TODO remove
-  target: Entity;
+  static randGenes(): GenesType {
+    return {
+      maxHp: 3,
+      lossHp: random(0.8, 1.2),
+      breedHpFactor: random(1.7, 2.3),
+      maxSpeed: random(2.5, 4.5),
+      maxForceFactor: random(0.2, 0.4),
+      eatWeight: random(-1, 5),
+      avoidWeight: random(-5, 1),
+      eatPerception: random(60, 200),
+      avoidPerception: random(60, 200),
+      ageNextDefecateMean: random(80, 120),
+    };
+  }
 
-  constructor(x: number, y: number, genes: GenesType = {}) {
+  constructor(x: number, y: number, genes = Worm.randGenes()) {
     genes = { ...Worm.DEFAULT_GENES, ...genes };
     genes = {
       ...genes,
-      maxHp: genes.maxHp * random(0.95, 1.05),
+      maxHp: genes.maxHp,
       lossHp: genes.lossHp * random(0.9, 1.1),
       breedHpFactor: genes.breedHpFactor * random(0.9, 1.1),
       maxSpeed: genes.maxSpeed * random(0.95, 1.05),
@@ -30,15 +43,10 @@ class Worm extends Living {
       avoidWeight: genes.avoidWeight * random(0.9, 1.1),
       eatPerception: genes.eatPerception * random(0.9, 1.1),
       avoidPerception: genes.avoidPerception * random(0.9, 1.1),
+      ageNextDefecateMean: genes.ageNextDefecateMean * random(0.98, 1.02),
     }
     super(x, y, Worm.RADIUS, genes);
     this.vel = p5.Vector.random2D().mult(random(1.5, 2.5));
-  }
-
-  update() {
-    super.update();
-    this.tryBreed();
-    this.tryDefecate();
   }
 
   render() {
@@ -58,39 +66,15 @@ class Worm extends Living {
       circle(this.pos.x, this.pos.y, this.genes.eatPerception*2);
       pop();
     }
-/*
-    if (this.target) {
-      push();
-      stroke(255, 0, 255);
-      strokeWeight(2);
-      noFill();
-      circle(this.target.pos.x, this.target.pos.y, this.target.r + 10);
-      pop();
-    }*/
   }
 
   tryBreed() {
     if (this.hp < this.genes.breedHpFactor * this.genes.maxHp)
       return;
-    this.hp /= 2;
-    entities.add(new Worm(this.pos.x, this.pos.y, this.genes));
-  }
-
-  tryEat(p: Plant) {
-    if (this.pos.dist(p.pos) > this.r)
-      return;
-    this.hp += p.hp;
-    p.hp = 0;
-  }
-
-  tryDefecate() {
-    if (random(1) > 0.01)
-      return;
-    this.hp -= this.genes.lossHp;
-    entities.add(new Nutrient(
-      this.pos.x, this.pos.y,
-      this.r * random(15, 30), this.genes.lossHp
-    ));
+    const offspring = new Worm(this.pos.x, this.pos.y, this.genes);
+    offspring.hp = min(this.hp / 2, offspring.genes.maxHp);
+    this.hp -= min(this.hp / 2, offspring.genes.maxHp);
+    entities.add(offspring);
   }
 
   steerApproach() {
@@ -99,8 +83,6 @@ class Worm extends Living {
       (e) => (e instanceof Plant),
       this.genes.eatPerception
     );
-
-    this.target = food;
 
     if (!food)
       return createVector(0, 0);
@@ -111,15 +93,31 @@ class Worm extends Living {
   }
 
   steerAvoid() {
-    const nearest = qtree.nearest(
+    const nearestChicken = qtree.nearest(
       this.pos.x, this.pos.y,
-      (e) => (e instanceof Worm),
+      (e) => (e !== this && e instanceof Chicken),
+      this.genes.avoidPerception
+    );
+    
+    const nearestWorm = qtree.nearest(
+      this.pos.x, this.pos.y,
+      (e) => (e !== this && e instanceof Worm),
       this.genes.avoidPerception
     );
 
-    if (!nearest)
-      return createVector(0, 0);
+    let force = createVector(0, 0);
 
-    return this.seek(nearest);
+    if (nearestChicken)
+      force = force.add(this.seek(nearestChicken));
+    if (nearestWorm)
+      force = force.add(this.seek(nearestWorm));
+/*
+    push()
+    stroke(255, 20, 20)
+    strokeWeight(2)
+    translate(this.pos.x, this.pos.y)
+    line(0, 0, force.x * 300 * this.genes.avoidWeight, force.y * 300 * this.genes.avoidWeight)
+    pop()*/
+    return force;
   }
 }

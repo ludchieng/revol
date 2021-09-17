@@ -3,7 +3,7 @@ class Nutrient extends Entity {
   static AGE_GROW_PLANTS_MEAN = 50;
   
   ageGrowPlants: number;
-  pGrowPlants = 0.05;
+  pGrowPlants = 0.007;
   nutrition: number;
 
   constructor(
@@ -12,7 +12,7 @@ class Nutrient extends Entity {
   ) {
     super(x, y, r);
     this.nutrition = nutrition;
-    this.ageGrowPlants = Nutrient.AGE_GROW_PLANTS_MEAN * random(0.6, 1.4);
+    this.ageGrowPlants = Nutrient.AGE_GROW_PLANTS_MEAN * random(0.8, 1.4);
   }
 
   update() {
@@ -24,16 +24,14 @@ class Nutrient extends Entity {
     if (this.age() < this.ageGrowPlants)
       return;
     
-    if (random(1) < sq(this.nutrition * this.pGrowPlants)) {
-      for (let i = floor(random(5)) ; i > 0 && this.nutrition > 0 ; i--) {
-        const plantMaxHp = min(this.nutrition, Plant.DEFAULT_GENES.maxHp);
-        this.nutrition -= plantMaxHp;
-        entities.add(new Plant(
-          randomGaussian(this.pos.x, this.r*0.5),
-          randomGaussian(this.pos.y, this.r*0.5),
-          { maxHp: plantMaxHp }  
-        ));
-      }
+    if (random(1) < this.nutrition * this.pGrowPlants) {
+      const plantMaxHp = min(this.nutrition, Plant.DEFAULT_GENES.maxHp);
+      this.nutrition -= plantMaxHp;
+      entities.add(new Plant(
+        randomGaussian(this.pos.x, this.r*0.5),
+        randomGaussian(this.pos.y, this.r*0.5),
+        { maxHp: plantMaxHp }  
+      ));
     }
   }
 
