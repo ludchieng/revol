@@ -5,16 +5,14 @@ let qtreeVisitor: QuadTreeVisitor<Entity>;
 let view: View;
 let chart: LineChart;
 
-let mousepoint: p5.Vector;
-
 function setup() {
   createCanvas(windowWidth, windowHeight);
   frameRate(30).noFill().noStroke().rectMode(CENTER);
 
-  view = new View(width/2, height/2, 0.89);
+  view = new View(width/4, height/2, 0.89);
   entities = new EntitiesList();
 
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 60; i++) {
     const x = randomGaussian(0, width * 2);
     const y = randomGaussian(0, height * 2);
     const n = new Nutrient(x, y, random(50, 400), ceil(random(2, 20)))
@@ -23,16 +21,55 @@ function setup() {
     entities.add(n);
   }
 
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 0; i++) {
     entities.add(new Worm(random(-width, width), random(-height, height)));
   }
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 0; i++) {
     entities.add(new Chicken(random(-width, width), random(-height, height)));
   }
 
-  // chart = new LineChart(50, 50);
+  chart = new LineChart(950, 950, 1900, 1900);
 }
+
+
+function draw() {
+  view.update();
+  view.debug();
+  
+  background(0);
+
+  quadtree();
+
+  entities.update();
+  entities.render();
+  
+  // Draw map boundaries
+  push();
+  stroke(255);
+  strokeWeight(1);
+  rect(0, 0, 1800, 1800);
+  pop();
+
+  // Update charts data
+  if (frameCount % 2 === 0) {
+    chart.add(entities.plants.length, 0)
+    chart.add(entities.worms.length, 1)
+    chart.add(entities.chickens.length, 2)
+  }
+  chart.render();
+}
+
+
+function quadtree() {
+  const boundary = new Rectangle(0, 0, 900, 900);
+  qtree = new QuadTree(boundary, 4);
+
+  for (const e of entities.all()) {
+    qtree.insert(new Point(e.pos.x, e.pos.y, e));
+  }
+}
+
 
 
 function windowResized() {
@@ -45,58 +82,17 @@ function mouseWheel(e: {delta: number}) {
 }
 
 
-function draw() {
-  view.update();
-  view.debug();
-  
-  background(0);
-
-  quadtree();
-  
-  for (const e of entities.all()) {
-    e.update();
-    e.render();
+function keyPressed() {
+  if (key === 'a') {
+    entities.add(new Worm(random(-width, width), random(-height, height)));
   }
-
-  if (mousepoint) {
-    push();
-    fill(255, 50, 50);
-    noStroke();
-    circle(mousepoint.x, mousepoint.y, 16)
-    pop();
+  if (key === 'z') {
+    entities.add(new Chicken(random(-width, width), random(-height, height)));
   }
-
-  entities.updateLists();
-
-  for (let e of entities.all()) {
-    const range = new Circle(e.pos.x, e.pos.y, e.r);
-    const matches = qtree.queryAll(range, (e) => (e instanceof Nutrient));
-    for (let m of matches) {
-      if (e !== m && e.intersects(m)) {
-        push();
-        stroke(255);
-        strokeWeight(1);
-        //circle(e.pos.x, e.pos.y, e.r+10);
-        pop();
-      }
-    }
+  if (key === 'q') {
+    entities.worms.splice(0, 1);
   }
-  
-  push();
-  stroke(255);
-  strokeWeight(1);
-  rect(0, 0, 1800, 1800);
-  pop();
-
-  // chart.render();
-}
-
-
-function quadtree() {
-  const boundary = new Rectangle(0, 0, 900, 900);
-  qtree = new QuadTree(boundary, 4);
-
-  for (const e of entities.all()) {
-    qtree.insert(new Point(e.pos.x, e.pos.y, e));
+  if (key === 's') {
+    entities.chickens.splice(0, 1);
   }
 }

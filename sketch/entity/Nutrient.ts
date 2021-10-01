@@ -37,7 +37,7 @@ class Nutrient extends Entity {
 
   render() {
     push();
-    fill(lerpColor(color(25), color(50, 40, 25), this.nutrition/50));
+    fill(lerpColor(color(32), color(50, 40, 25), this.nutrition/50));
     noStroke();
     circle(this.pos.x, this.pos.y, this.r);
     pop();

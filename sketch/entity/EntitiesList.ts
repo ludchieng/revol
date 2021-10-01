@@ -42,7 +42,7 @@ class EntitiesList {
     ];
   }
 
-  updateLists() {
+  update() {
     for (let i = this.nutrients.length-1; i >= 0; i--) {
       if (this.nutrients[i].nutrition <= 0) {
         this.nutrients.splice(i, 1);
@@ -67,6 +67,15 @@ class EntitiesList {
       }
     }
     
+    for (const e of entities.all()) {
+      e.update();
+    }
+  }
+
+  render() {
+    for (const e of entities.all()) {
+      e.render();
+    }
   }
 
   energySum() {

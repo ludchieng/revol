@@ -3,13 +3,12 @@ var qtree;
 var qtreeVisitor;
 var view;
 var chart;
-var mousepoint;
 function setup() {
     createCanvas(windowWidth, windowHeight);
     frameRate(30).noFill().noStroke().rectMode(CENTER);
-    view = new View(width / 2, height / 2, 0.89);
+    view = new View(width / 4, height / 2, 0.89);
     entities = new EntitiesList();
-    for (var i = 0; i < 40; i++) {
+    for (var i = 0; i < 60; i++) {
         var x = randomGaussian(0, width * 2);
         var y = randomGaussian(0, height * 2);
         var n = new Nutrient(x, y, random(50, 400), ceil(random(2, 20)));
@@ -17,11 +16,39 @@ function setup() {
         n.pGrowPlants = Infinity;
         entities.add(n);
     }
-    for (var i = 0; i < 60; i++) {
+    for (var i = 0; i < 0; i++) {
         entities.add(new Worm(random(-width, width), random(-height, height)));
     }
-    for (var i = 0; i < 5; i++) {
+    for (var i = 0; i < 0; i++) {
         entities.add(new Chicken(random(-width, width), random(-height, height)));
+    }
+    chart = new LineChart(950, 950, 1900, 1900);
+}
+function draw() {
+    view.update();
+    view.debug();
+    background(0);
+    quadtree();
+    entities.update();
+    entities.render();
+    push();
+    stroke(255);
+    strokeWeight(1);
+    rect(0, 0, 1800, 1800);
+    pop();
+    if (frameCount % 2 === 0) {
+        chart.add(entities.plants.length, 0);
+        chart.add(entities.worms.length, 1);
+        chart.add(entities.chickens.length, 2);
+    }
+    chart.render();
+}
+function quadtree() {
+    var boundary = new Rectangle(0, 0, 900, 900);
+    qtree = new QuadTree(boundary, 4);
+    for (var _i = 0, _a = entities.all(); _i < _a.length; _i++) {
+        var e = _a[_i];
+        qtree.insert(new Point(e.pos.x, e.pos.y, e));
     }
 }
 function windowResized() {
@@ -30,50 +57,18 @@ function windowResized() {
 function mouseWheel(e) {
     view.zoom(e.delta);
 }
-function draw() {
-    view.update();
-    view.debug();
-    background(0);
-    quadtree();
-    for (var _i = 0, _a = entities.all(); _i < _a.length; _i++) {
-        var e = _a[_i];
-        e.update();
-        e.render();
+function keyPressed() {
+    if (key === 'a') {
+        entities.add(new Worm(random(-width, width), random(-height, height)));
     }
-    if (mousepoint) {
-        push();
-        fill(255, 50, 50);
-        noStroke();
-        circle(mousepoint.x, mousepoint.y, 16);
-        pop();
+    if (key === 'z') {
+        entities.add(new Chicken(random(-width, width), random(-height, height)));
     }
-    entities.updateLists();
-    for (var _b = 0, _c = entities.all(); _b < _c.length; _b++) {
-        var e = _c[_b];
-        var range = new Circle(e.pos.x, e.pos.y, e.r);
-        var matches = qtree.queryAll(range, function (e) { return (e instanceof Nutrient); });
-        for (var _d = 0, matches_1 = matches; _d < matches_1.length; _d++) {
-            var m = matches_1[_d];
-            if (e !== m && e.intersects(m)) {
-                push();
-                stroke(255);
-                strokeWeight(1);
-                pop();
-            }
-        }
+    if (key === 'q') {
+        entities.worms.splice(0, 1);
     }
-    push();
-    stroke(255);
-    strokeWeight(1);
-    rect(0, 0, 1800, 1800);
-    pop();
-}
-function quadtree() {
-    var boundary = new Rectangle(0, 0, 900, 900);
-    qtree = new QuadTree(boundary, 4);
-    for (var _i = 0, _a = entities.all(); _i < _a.length; _i++) {
-        var e = _a[_i];
-        qtree.insert(new Point(e.pos.x, e.pos.y, e));
+    if (key === 's') {
+        entities.chickens.splice(0, 1);
     }
 }
 var View = (function () {
@@ -146,7 +141,7 @@ var EntitiesList = (function () {
     EntitiesList.prototype.all = function () {
         return __spreadArrays(this.nutrients, this.plants, this.worms, this.chickens);
     };
-    EntitiesList.prototype.updateLists = function () {
+    EntitiesList.prototype.update = function () {
         for (var i = this.nutrients.length - 1; i >= 0; i--) {
             if (this.nutrients[i].nutrition <= 0) {
                 this.nutrients.splice(i, 1);
@@ -166,6 +161,16 @@ var EntitiesList = (function () {
             if (this.chickens[i].dead()) {
                 this.chickens.splice(i, 1);
             }
+        }
+        for (var _i = 0, _a = entities.all(); _i < _a.length; _i++) {
+            var e = _a[_i];
+            e.update();
+        }
+    };
+    EntitiesList.prototype.render = function () {
+        for (var _i = 0, _a = entities.all(); _i < _a.length; _i++) {
+            var e = _a[_i];
+            e.render();
         }
     };
     EntitiesList.prototype.energySum = function () {
@@ -252,7 +257,7 @@ var Nutrient = (function (_super) {
     };
     Nutrient.prototype.render = function () {
         push();
-        fill(lerpColor(color(25), color(50, 40, 25), this.nutrition / 50));
+        fill(lerpColor(color(32), color(50, 40, 25), this.nutrition / 50));
         noStroke();
         circle(this.pos.x, this.pos.y, this.r);
         pop();
@@ -403,11 +408,11 @@ var Chicken = (function (_super) {
             maxHp: 16,
             lossHp: random(1.8, 2.2),
             breedHpFactor: random(1.7, 2.3),
-            maxSpeed: random(3.5, 4.5),
-            maxForceFactor: random(0.2, 0.3),
+            maxSpeed: random(7., 9.),
+            maxForceFactor: random(1.5, 2.),
             eatWeight: random(-1, 10),
             avoidWeight: random(-10, 1),
-            eatPerception: random(80, 160),
+            eatPerception: random(60, 100),
             avoidPerception: random(60, 100),
             ageNextDefecateMean: random(60, 100),
         };
@@ -460,8 +465,8 @@ var Chicken = (function (_super) {
         maxHp: 16,
         lossHp: 2,
         breedHpFactor: 2,
-        maxSpeed: 4,
-        maxForceFactor: 0.25,
+        maxSpeed: 6,
+        maxForceFactor: 1,
         eatWeight: 5,
         avoidWeight: -2,
         eatPerception: 120,
@@ -556,15 +561,26 @@ var LineChart = (function () {
     function LineChart(x, y, sizeX, sizeY) {
         if (sizeX === void 0) { sizeX = 600; }
         if (sizeY === void 0) { sizeY = 400; }
-        this.labels = [];
-        this.values = [];
+        this.datasets = [];
         this.pos = createVector(x, y);
         this.size = createVector(sizeX, sizeY);
     }
-    LineChart.prototype.add = function (value, label) {
-        if (label === void 0) { label = ""; }
-        this.labels.push(label);
-        this.values.push(value);
+    LineChart.prototype.add = function (value, set) {
+        if (set === void 0) { set = 0; }
+        if (this.datasets[set] === undefined) {
+            this.datasets[set] = {
+                values: [],
+                color: LineChart.COLORS[set],
+                scale: LineChart.SCALES[set],
+            };
+        }
+        if (this.datasets[set].values.length > this.size.y - 100) {
+            for (var _i = 0, _a = this.datasets; _i < _a.length; _i++) {
+                var d = _a[_i];
+                d.values.splice(0, 1);
+            }
+        }
+        this.datasets[set].values.push(value);
     };
     LineChart.prototype.update = function () {
     };
@@ -578,13 +594,33 @@ var LineChart = (function () {
         rectMode(CORNER);
         rect(0, 0, this.size.x, this.size.y);
         pop();
-        stroke(255);
+        push();
+        stroke(200);
+        strokeWeight(1);
         translate(m, m);
         line(0, 0, 0, this.size.y - m * 2);
         line(0, 0, this.size.x - m * 2, 0);
-        scale(30, (this.size.y - m * 2));
+        pop();
+        push();
+        stroke(255);
+        strokeWeight(3);
+        translate(m, m);
+        for (var _i = 0, _a = this.datasets; _i < _a.length; _i++) {
+            var set_1 = _a[_i];
+            push();
+            beginShape();
+            stroke(set_1.color);
+            for (var j = 0; j < set_1.values.length; ++j) {
+                vertex(j, set_1.values[j] * set_1.scale);
+            }
+            endShape();
+            pop();
+        }
+        pop();
         pop();
     };
+    LineChart.COLORS = ['#5f5', '#fc8', '#f59'];
+    LineChart.SCALES = [2, 4, 4];
     return LineChart;
 }());
 var Circle = (function () {
